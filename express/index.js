@@ -6,7 +6,7 @@ app.get('/', (req,res)=>{
     res.send("Hello world!");
 });
 
-//dynamic parameter 
+//dynamic parameter  
 app.get('/user/:username', (req,res)=>{
     const username= req.params.username;
     res.send(`Welcome ${username}`);
