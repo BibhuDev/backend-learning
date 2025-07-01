@@ -4,71 +4,85 @@ const { body, validationResult } = require('express-validator');
 const userModel = require('../models/user.model');
 const user = require('../models/user.model');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-router.get('/register', (req,res)=>{
+router.get('/register', (req, res) => {
     res.render("register");
 })
 
 router.post('/register',
-    body('email').trim().isEmail({min:10}),
-    body('password').trim().isLength({min:5}),
-    body('username').trim().isLength({min:3}),
-    async (req,res)=>{
+    body('email').trim().isEmail({ min: 10 }),
+    body('password').trim().isLength({ min: 5 }),
+    body('username').trim().isLength({ min: 3 }),
+    async (req, res) => {
 
         const errors = validationResult(req);
         console.log(errors);
 
-    const {email, username, password} = req.body;
+        const { email, username, password } = req.body;
 
-    const hashPass = await bcrypt.hash(password, 10);
+        const hashPass = await bcrypt.hash(password, 10);
 
-    const newUser = await userModel.create({
-        email,
-        username,
-        password: hashPass
+        const newUser = await userModel.create({
+            email,
+            username,
+            password: hashPass
+        })
+
+        res.json(newUser);
     })
 
-    res.json(newUser);
-})
-
-router.get('/login', (req,res)=>{
+router.get('/login', (req, res) => {
     res.render('login');
 })
 
 router.post('/login',
-    body('password').trim().isLength({min:5}),
-    body('username').trim().isLength({min:3}),
-    async (req,res)=>{
+    body('password').trim().isLength({ min: 5 }),
+    body('username').trim().isLength({ min: 3 }),
+    async (req, res) => {
 
         const errors = validationResult(req);
-        if(errors.isEmpty()){
+        if (!errors.isEmpty()) {
             return res.status(400).json({
                 error: errors.array(),
                 message: "invalid data"
             })
-        } 
-        const {username, password} = req.body;
+        }
+        const { username, password } = req.body;
 
-        const newUser = await userModel.findOne({
-        username,
-    })
-
-    if(!user){
-        return res.status(400).json({
-            message: 'username or password is not correct'
+        const user = await userModel.findOne({
+            username,
         })
-    }
 
-    const isMatch = await bcrypt.compare(password, user.password)
+        if (!user) {
+            return res.status(400).json({
+                message: 'username or password is not correct'
+            })
+        }
 
-    if(!isMatch){
-        return res.status(400).json({
-            message: 'username or password is not correct'
-        })
-    }
-    }
-)
+        const isMatch = await bcrypt.compare(password, user.password)
+
+        if (!isMatch) {
+            return res.status(400).json({
+                message: 'username or password is not correct'
+            })
+        }
+    
+
+    const token = jwt.sign({
+        userId: user._id,
+        email: user.email,
+        username: user.username
+    },
+        process.env.JWT_SECRET,
+    )
+
+    res.cookie('token', token)
+
+    res.send("Logged in")
+
+})
 
 
 
-module.exports= router; 
+module.exports = router; 
